@@ -35,7 +35,7 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs-storage
+  storageClassName: azurefile-premium
 ---
 apiVersion: apps/v1
 kind: Deployment
