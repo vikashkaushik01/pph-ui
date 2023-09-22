@@ -31,7 +31,7 @@ metadata:
   name: reports-data-claim-test
 spec:
   accessModes:
-  - "ReadWriteMany"
+  - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
