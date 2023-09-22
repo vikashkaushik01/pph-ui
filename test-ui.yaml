@@ -31,11 +31,11 @@ metadata:
   name: reports-data-claim-test
 spec:
   accessModes:
-  - ReadWriteMany
+  - "ReadWriteMany"
   resources:
     requests:
       storage: 5Gi
-  storageClassName: azurefile-premium
+  storageClassName: "azurefile-premium"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -148,34 +148,47 @@ spec:
       environment: test
       nibr-app-name: pph-ui
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
-    ingress.kubernetes.io/timeout-server: 300s
+    gitopsurl: "https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse"
+    ingress.kubernetes.io/timeout-server: "300s"
+  uid: "fd6daf84-a6be-49b8-849a-19179f1f2ea5"
+  name: "pph-ui-ingress-test"
   labels:
-    environment: test
-    nibr-app-name: pph-ui
-  name: pph-ui-ingress-test
+    environment: "test"
+    nibr-app-name: "pph-ui"
+    app.kubernetes.io/name: "pph-ui-test"
+    app.kubernetes.io/instance: "pph-ui-test"
 spec:
   rules:
-  - host: pph.tst.nibr.novartis.net
+  - host: "pph.tst.nibr.novartis.net"
     http:
       paths:
-      - backend:
-          serviceName: pph-ui-service-test
-          servicePort: pph-ui-port
-        path: /
-  - host: prime-stage.nibr.novartis.net
+      - path: "/"
+        pathType: "ImplementationSpecific"
+        backend:
+          service:
+            name: "pph-ui-service-test"
+            port:
+              number: 80  # Use the actual port number here
+  - host: "prime-stage.nibr.novartis.net"
     http:
       paths:
-      - backend:
-          serviceName: pph-ui-service-test
-          servicePort: pph-ui-port
-        path: /
+      - path: "/"
+        pathType: "ImplementationSpecific"
+        backend:
+          service:
+            name: "pph-ui-service-test"
+            port:
+              number: 80  # Use the actual port number here
   tls:
   - hosts:
-    - prime-stage.nibr.novartis.net
-    - pph.tst.nibr.novartis.net
-    secretName: pph-tls-test
+    - "pph.tst.nibr.novartis.net"
+    - "prime-stage.nibr.novartis.net"
+    secretName: "pph-tls-test"
+status:
+  loadBalancer:
+    ingress:
+    - {}
