@@ -1,0 +1,181 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
+  labels:
+    environment: test
+    nibr-app-name: pph-ui
+  name: pph-ui-service-test
+spec:
+  externalIPs: []
+  healthCheckNodePort: 0
+  loadBalancerSourceRanges: []
+  ports:
+  - name: pph-ui-port
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    environment: test
+    nibr-app-name: pph-ui
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
+  labels:
+    environment: test
+  name: reports-data-claim-test
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-storage
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
+  labels:
+    environment: test
+    nibr-app-name: pph-ui
+  name: pph-ui-deploy-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      environment: test
+      nibr-app-name: pph-ui
+  template:
+    metadata:
+      annotations:
+        gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-secret.properties: secret/projects/[[j]]/test/secrets
+        vault.hashicorp.com/agent-inject-template-secret.properties: '{{ with secret
+          "secret/projects/pph/test/secrets" -}} {{ range $k,$v := .Data.data }} export
+          {{ $k }}="{{ $v }}" {{ end }} {{- end }}'
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/auth-path: auth/kube3
+        vault.hashicorp.com/role: project_pph_test_read
+        vault.hashicorp.com/tls-skip-verify: "true"
+      labels:
+        environment: test
+        nibr-app-name: pph-ui
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions: []
+                matchLabels:
+                  environment: test
+                  nibr-app-name: pph-ui
+              namespaces: []
+              topologyKey: kubernetes.io/hostname
+            weight: 10
+      containers:
+      - env:
+        - name: JAVA_OPTS
+          value: -Xms256m -Xmx1536m -XX:+UseG1GC
+        image: docker-repo.nibr.novartis.net/pph/ppm:test
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /ppm
+            port: tomcat-port
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: pph-ui-tomcat
+        ports:
+        - containerPort: 8080
+          name: tomcat-port
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /ppm/readiness
+            port: tomcat-port
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 5
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: "4.0"
+            memory: 2Gi
+          requests:
+            cpu: 300m
+            memory: 300Mi
+        volumeMounts:
+        - mountPath: /usr/share/tomcat9/webapps/reports
+          name: reports-data
+          readOnly: false
+      serviceAccountName: vault-auth
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: reports-data
+        persistentVolumeClaim:
+          claimName: reports-data-claim-test
+          readOnly: false
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
+  labels:
+    app.kubernetes.io/name: pph-app
+    environment: test
+  name: pph-pdb-test
+spec:
+  minAvailable: 1
+  selector:
+    matchExpressions: []
+    matchLabels:
+      environment: test
+      nibr-app-name: pph-ui
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    gitopsurl: https://bitbucket.prd.nibr.novartis.net/projects/DENG/repos/pph_ui-zephyr-deploy/browse
+    ingress.kubernetes.io/timeout-server: 300s
+  labels:
+    environment: test
+    nibr-app-name: pph-ui
+  name: pph-ui-ingress-test
+spec:
+  rules:
+  - host: pph.tst.nibr.novartis.net
+    http:
+      paths:
+      - backend:
+          serviceName: pph-ui-service-test
+          servicePort: pph-ui-port
+        path: /
+  - host: prime-stage.nibr.novartis.net
+    http:
+      paths:
+      - backend:
+          serviceName: pph-ui-service-test
+          servicePort: pph-ui-port
+        path: /
+  tls:
+  - hosts:
+    - prime-stage.nibr.novartis.net
+    - pph.tst.nibr.novartis.net
+    secretName: pph-tls-test
