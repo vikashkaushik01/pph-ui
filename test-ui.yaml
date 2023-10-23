@@ -85,7 +85,7 @@ spec:
       - env:
         - name: JAVA_OPTS
           value: -Xms256m -Xmx1536m -XX:+UseG1GC
-        image: docker-repo.nibr.novartis.net/pph/ppm:test
+        image: httpd
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 5
